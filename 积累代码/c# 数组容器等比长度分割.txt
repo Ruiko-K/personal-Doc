@@ -1,0 +1,34 @@
+ #region 字符串集合分割成指定长度的等比小集合
+        protected List<List<String>> SpiltList(List<String> Lists, int num)
+        {
+            List<List<String>> fz = new List<List<String>>();
+            int totleCount = Lists.Count;
+            if (totleCount > num)
+            {
+                int loopCount = totleCount / num;
+                int vga = totleCount % num;
+
+                for (int i = 0; i <= loopCount; i++)
+                {
+                    List<String> oneGroup = new List<String>();
+                    for (int j = i * num; j < (i + 1) * num; j++)
+                    {
+                        if (j >= Lists.Count)
+                        {
+                            break;
+                        }
+                        oneGroup.Add(Lists[j]);
+                    }
+
+                    if (oneGroup.Count != 0)
+                    {
+                        fz.Add(oneGroup);
+                    }
+                }
+
+            }
+
+
+            return fz;
+        }
+        #endregion

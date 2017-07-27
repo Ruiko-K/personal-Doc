@@ -1,0 +1,88 @@
+/// <summary>
+        /// npoi创建Excel表格
+        /// </summary>
+        /// <param name="cellContent">单元格内容</param>
+        /// <param name="ranks">查询内容</param>
+        /// <param name="strSql">sql语句</param>
+        /// <param name="filePath">文件路径</param>
+        private void npoi(string cellContent, string ranks)
+        {
+            DataTable dtF = (DataTable)ViewState["excelDev"];
+            if (dtF == null)
+            {
+                return;
+            }
+
+            //ISExist();
+            //HSSFWorkbook wk = new HSSFWorkbook();//xls类型
+            XSSFWorkbook wk = new XSSFWorkbook();//xlsx类型
+            ISheet tb = wk.CreateSheet("字段明细");
+            //====================第一行内容(初始化) start===================
+            IRow row = tb.CreateRow(0);//创建一行
+            //row.HeightInPoints = 20;//行高
+            string[] contentList = cellContent.Split(',');
+            string[] rankList = ranks.Split(',');
+            ICell cell;
+            ICellStyle style = wk.CreateCellStyle();//创建样式对象
+            IFont font = wk.CreateFont(); //创建一个字体样式对象
+            style.Alignment = HorizontalAlignment.Center; // 居中
+            //有边框
+            style.BorderBottom = NPOI.SS.UserModel.BorderStyle.Thin;
+            style.BorderLeft = NPOI.SS.UserModel.BorderStyle.Thin;
+            style.BorderRight = NPOI.SS.UserModel.BorderStyle.Thin;
+            style.BorderTop = NPOI.SS.UserModel.BorderStyle.Thin;
+            //遍历生成单元格
+            for (int i = 0; i < contentList.Length; i++)
+            {
+                //添加数据
+                cell = row.CreateCell(i);
+                cell.SetCellValue(contentList[i]);
+                //单元格宽度
+                tb.SetColumnWidth(i, 3966);
+                //修改背景色
+                style.FillForegroundColor = NPOI.HSSF.Util.HSSFColor.Grey25Percent.Index;
+                style.FillPattern = FillPattern.SolidForeground;
+                cell.CellStyle = style;
+                //设置字体
+                font.Boldweight = (short)NPOI.SS.UserModel.FontBoldWeight.Bold;
+                font.FontName = "宋体";
+                font.FontHeightInPoints = 11;
+                style.SetFont(font);
+            }
+            //====================第一行内容 end===================
+
+            ICellStyle styleToo = wk.CreateCellStyle();//创建遍历单元格样式对象对象
+            //只添加边框
+            styleToo.BorderBottom = NPOI.SS.UserModel.BorderStyle.Thin;
+            styleToo.BorderLeft = NPOI.SS.UserModel.BorderStyle.Thin;
+            styleToo.BorderRight = NPOI.SS.UserModel.BorderStyle.Thin;
+            styleToo.BorderTop = NPOI.SS.UserModel.BorderStyle.Thin;
+
+            //======根据数据库查询内容进行数据填充 start===========
+            //数据查询
+
+
+            int line = 1;
+            foreach (DataRow drF in dtF.Rows)
+            {
+
+                int temp = -1;//某一行列数依次叠加
+                row = tb.CreateRow(line);//第二行开始依次叠加
+                foreach (string con in rankList)
+                {
+                    cell = row.CreateCell(++temp);
+                    cell.SetCellValue(drF[con].ToString().Trim());
+                    cell.CellStyle = styleToo;
+                }
+                line++;
+            }
+            //======根据数据库查询内容进行数据填充 end===========
+            // 创建文件
+            //以字符流的形式下载文件
+            MemoryStream memoryStream = new MemoryStream(); //创建内存流
+            wk.Write(memoryStream);
+            HttpContext.Current.Response.AppendHeader("Content-Disposition", "attachment;filename=" + "人员别.xlsx");
+            HttpContext.Current.Response.BinaryWrite(memoryStream.ToArray());
+            HttpContext.Current.Response.End();
+            memoryStream.Dispose();
+        }

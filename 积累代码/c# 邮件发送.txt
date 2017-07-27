@@ -1,0 +1,116 @@
+/// <summary>
+        /// 同步进行邮件发送公告
+        /// </summary>
+        private void sendNoticeForEmail()
+        {
+            //公告标题
+            String title = this.txtI_POST_TITLE.Text;
+
+            //公告开始时间
+            String startData = "<p>公告时间：" + txtI_POST_BEGIN.Value + "</p>";
+            //公告人员
+            String noticeUser = "<p>公告人员：" + txtI_POST_USER.Text + "</p>";
+            //OA公告正文
+            String postTxt = txtI_POST_DESC.Text;
+
+            //尾部签名
+            StringBuilder htmlBodyContent = new StringBuilder();
+            htmlBodyContent.Append("<br/>FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT");
+            htmlBodyContent.Append("<br/>");
+            htmlBodyContent.Append("<p>本邮件由OA系统自动发送，请勿回复</p>");
+            htmlBodyContent.Append("<p>富统信息与传媒集团</p>");
+            htmlBodyContent.Append("<p>管理部</p>");
+            htmlBodyContent.Append("<p>上海总部地址：上海市逸仙路2816号华滋奔腾大厦A幢505-506室</p>");
+            htmlBodyContent.Append("<p>邮政编码：200441</p>");
+            htmlBodyContent.Append("<p>联系电话：021-61552874/61552884/61552894</p>");
+            htmlBodyContent.Append("<p><address> <a href='mailto:autoservices@futoit.net'>电子邮箱：autoservices@futoit.net</a></address></p>");
+            htmlBodyContent.Append("</br>");
+            htmlBodyContent.Append("FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT~FTIT");
+
+            //处理oa正文
+            string[] resultString = Regex.Split(postTxt, "\r\n", RegexOptions.IgnoreCase);
+            StringBuilder processEmail = new StringBuilder();
+            foreach (String temp in resultString)
+            {
+                String s = temp.Replace(" ", "&nbsp;");
+                processEmail.Append("<p>" + temp + "</p>");
+            }
+
+            //邮件公告正文
+            String emailBody = noticeUser + startData + processEmail + htmlBodyContent.ToString();
+
+
+            //查询收信所有收信人
+            String sql = "select DISTINCT t.i_email FROM t_users_mst t WHERE i_delete_flg = '0' AND i_flg_onduty = '0' AND i_email IS NOT NULL";
+            DataTable dtF = new OracleHelper().Query(sql).Tables[0];
+
+            //邮件发送服务
+            SmtpClient smtp = new SmtpClient();
+            smtp.Host = "smtpdm.aliyun.com";         //smtp服务器名称
+            smtp.Port = 25;
+            smtp.UseDefaultCredentials = true;
+            smtp.Credentials = new NetworkCredential("autoservices@futoit.net", "71l87MGKZZXo");  //发送人的登录名和密码
+
+            //最多一次收信人数
+            int maxPostCount = 20;
+
+            //判断是否分批发送
+            if (dtF.Rows.Count <= maxPostCount)
+            {
+
+                MailMessage mailObj = new MailMessage();
+                mailObj.From = new MailAddress("autoservices@futoit.net", "富统信息与传媒集团"); //发送人邮箱地址
+                //添加所有收件人
+                for (int i = 0; i < dtF.Rows.Count; i++)
+                {
+                    DataRow dr = dtF.Rows[i];
+                    String allEmail = dr["i_email"].ToString().Trim();
+                    if (allEmail != null && !allEmail.Equals(""))
+                    {
+                        mailObj.To.Add(allEmail);
+                    }
+                }
+
+                mailObj.Subject = title;    //主题
+                mailObj.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(emailBody, null, "text/html"));//正文
+
+                smtp.Send(mailObj);
+            }
+            else
+            {
+                List<String> emailArr = new List<String>();
+
+                //添加所有人地址
+                for (int i = 0; i < dtF.Rows.Count; i++)
+                {
+
+                    DataRow dr = dtF.Rows[i];
+                    String allEmail = dr["i_email"].ToString().Trim();
+                    if (allEmail != null && !allEmail.Equals(""))
+                    {
+                        emailArr.Add(allEmail);
+                    }
+                }
+
+                //分批发送数组
+                List<List<String>> groupList = SpiltList(emailArr, maxPostCount);
+
+                foreach (List<String> oneGroupEmail in groupList)
+                {
+
+                    MailMessage mailObj = new MailMessage();
+                    mailObj.From = new MailAddress("autoservices@futoit.net", "富统信息与传媒集团"); //发送人邮箱地址
+
+                    foreach (String oneMail in oneGroupEmail)
+                    {
+                        mailObj.To.Add(oneMail);
+                    }
+                    mailObj.Subject = title;    //主题
+                    mailObj.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(emailBody, null, "text/html"));//正文
+                    smtp.Send(mailObj);
+                }
+
+            }
+
+
+        }
